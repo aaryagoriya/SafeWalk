@@ -10,7 +10,11 @@ import {
 
 import { useRouter } from "expo-router";
 
-import {createUserWithEmailAndPassword,updateProfile} from "firebase/auth";
+import {
+    createUserWithEmailAndPassword,
+    updateProfile,
+    signOut
+} from "firebase/auth";
 
 import {doc,setDoc} from "firebase/firestore";
 
@@ -145,12 +149,14 @@ const SignUp = () => {
                 }
             );
 
+            await signOut(auth);
+
             Alert.alert(
                 "Success",
-                "Account created successfully"
+                "Account created successfully. Please sign in."
             );
 
-            router.replace("/Home");
+            router.replace("/Login");
 
         } catch (error) {
 
@@ -298,19 +304,7 @@ const SignUp = () => {
 
                     <CustomButton
                         title="Sign Up"
-                        onPress={() => {
-
-                            if (auth.currentUser) {
-
-                                router.replace("/Login");
-
-                            } else {
-
-                                signUp();
-
-                            }
-
-                        }}
+                        onPress={signUp}
                     />
 
                 </View>

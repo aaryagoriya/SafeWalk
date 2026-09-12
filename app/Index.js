@@ -2,35 +2,32 @@ import React, { useEffect, useState } from "react";
 
 import {
     View,
-    TouchableOpacity,
-    Text
+    ActivityIndicator
 } from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
-import {onAuthStateChanged} from "firebase/auth";
-     
+import {
+    onAuthStateChanged
+} from "firebase/auth";
+
 import { auth } from "../FirebaseConfig";
 
-import Landing from "../screens/Landing";
-import Home from "../screens/Home";
-import Contact from "../screens/Contact";
-import Account from "../screens/Account";
-import SOS from "../screens/SOS";
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Feather from '@expo/vector-icons/Feather';
+import Landing from "./Landing";
 
 const Index = () => {
 
+    const router = useRouter();
+
     const [user, setUser] = useState(null);
+
     const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState("Home");
 
     useEffect(() => {
 
         const unsubscribe = onAuthStateChanged(
             auth,
-            (currentUser) => {
+            currentUser => {
 
                 setUser(currentUser);
                 setLoading(false);
@@ -42,32 +39,31 @@ const Index = () => {
 
     }, []);
 
-    const showPage = () => {
+    useEffect(() => {
 
-        if (page === "Home") {
-            return <Home />;
+        if (!loading && user) {
+
+            router.replace("/Tabs/Home");
+
         }
 
-        if (page === "SOS") {
-            return <SOS />;
-        }
-
-        if (page === "Contact") {
-            return <Contact />;
-        }
-
-        if (page === "Account") {
-            return <Account />;
-        }
-    };
+    }, [user, loading]);
 
     if (loading) {
 
         return (
             <View style={{
                 flex: 1,
-                backgroundColor: "black"
-            }} />
+                justifyContent: "center",
+                alignItems: "center"
+            }}>
+
+                <ActivityIndicator
+                    size="large"
+                    color="#2455F5"
+                />
+
+            </View>
         );
 
     }
@@ -78,150 +74,7 @@ const Index = () => {
 
     }
 
-    return (
-
-        <View style={{
-            flex: 1,
-            backgroundColor: "black"
-        }}>
-
-            <View style={{
-                flex: 1
-            }}>
-                {showPage()}
-            </View>
-
-            <View style={{
-                height: 75,
-                backgroundColor: "black",
-                borderTopWidth: 1,
-                borderTopColor: "#000",
-                flexDirection: "row",
-                justifyContent: "space-around",
-                alignItems: "center"
-            }}>
-
-                <TouchableOpacity
-                    onPress={() => setPage("Home")}
-                    style={{
-                        alignItems: "center"
-                    }}
-                >
-
-                    <AntDesign
-                        name="home"
-                        
-                        size={28}
-                        color={
-                            page === "Home"
-                                ? "#2455F5"
-                                : "#777777"
-                        }
-                    />
-
-                    <Text style={{
-                        fontSize: 12,
-                        marginTop: 3,
-                        color: page === "Home"
-                            ? "#2455F5"
-                            : "#777777"
-                    }}>
-                        Home
-                    </Text>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => setPage("SOS")}
-                    style={{
-                        alignItems: "center"
-                    }}
-                >
-
-                    <Feather
-                        name="phone"
-                        size={28}
-                        color={
-                            page === "SOS"
-                                ? "#F82F35"
-                                : "#777777"
-                        }
-                    />
-
-                    <Text style={{
-                        fontSize: 12,
-                        marginTop: 3,
-                        color: page === "SOS"
-                            ? "#F82F35"
-                            : "#777777"
-                    }}>
-                        SOS
-                    </Text>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => setPage("Contact")}
-                    style={{
-                        alignItems: "center"
-                    }}
-                >
-
-                    <Ionicons
-                        name="people-outline"
-                        size={28}
-                        color={
-                            page === "Contact"
-                                ? "#2455F5"
-                                : "#777777"
-                        }
-                    />
-
-                    <Text style={{
-                        fontSize: 12,
-                        marginTop: 3,
-                        color: page === "Contact"
-                            ? "#2455F5"
-                            : "#777777"
-                    }}>
-                        Contact
-                    </Text>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => setPage("Account")}
-                    style={{
-                        alignItems: "center"
-                    }}
-                >
-
-                    <Ionicons
-                        name="person-outline"
-                        size={28}
-                        color={
-                            page === "Account"
-                                ? "#2455F5"
-                                : "#777777"
-                        }
-                    />
-
-                    <Text style={{
-                        fontSize: 12,
-                        marginTop: 3,
-                        color: page === "Account"
-                            ? "#2455F5"
-                            : "#777777"
-                    }}>
-                        Account
-                    </Text>
-
-                </TouchableOpacity>
-
-            </View>
-
-        </View>
-    );
+    return null;
 };
 
 export default Index;

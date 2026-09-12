@@ -13,9 +13,7 @@ import { useRouter } from "expo-router";
 
 import {signInWithEmailAndPassword,sendPasswordResetEmail,signOut} from "firebase/auth";
 
-import {doc,getDoc} from "firebase/firestore";
-
-import { auth, db } from "../FirebaseConfig";
+import { auth } from "../FirebaseConfig";
 
 import CustomButton from "../components/CustomButton";
 
@@ -42,32 +40,13 @@ const Login = () => {
 
         try {
 
-            const result =
-                await signInWithEmailAndPassword(
-                    auth,
-                    email.trim(),
-                    password
-                );
+            await signInWithEmailAndPassword(
+                auth,
+                email.trim(),
+                password
+            );
 
-            const userRef =
-                doc(db, "users", result.user.uid);
-
-            const userData =
-                await getDoc(userRef);
-
-            if (!userData.exists()) {
-
-                await signOut(auth);
-
-                Alert.alert(
-                    "No Account",
-                    "You don't have an account yet. Please sign up."
-                );
-
-                return;
-            }
-
-            router.replace("/Index");
+            router.replace("/Tabs/Home");
 
         } catch (error) {
 

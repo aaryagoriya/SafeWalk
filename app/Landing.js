@@ -58,7 +58,7 @@ const Landing = () => {
                     fontSize: 24,
                     fontWeight: "bold"
                 }}>
-                    Don’t have a account
+                    Don’t have an account
                 </Text>
 
             </TouchableOpacity>
