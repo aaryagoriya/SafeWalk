@@ -79,46 +79,51 @@ const Home = () => {
         }}
       >
         <TouchableOpacity
-          style={{
-            width: "47%",
-            height: 182,
-            backgroundColor: "white",
-            borderRadius: 18,
-            elevation: 4,
-            shadowColor: "#000",
-            shadowOpacity: 0.15,
-            shadowRadius: 5,
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            alignItems: "center",
-            paddingTop: 36,
-          }}
-        >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: "#2455F5",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="navigate-outline" size={48} color="white" />
-          </View>
+    onPress={() => router.push("/Walk")}
+    style={{
+        width: "47%",
+        height: 182,
+        backgroundColor: "white",
+        borderRadius: 18,
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        alignItems: "center",
+        paddingTop: 36
+    }}
+>
+    <View
+        style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: "#2455F5",
+            justifyContent: "center",
+            alignItems: "center"
+        }}
+    >
+        <Ionicons
+            name="navigate-outline"
+            size={48}
+            color="white"
+        />
+    </View>
 
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              marginTop: 25,
-            }}
-          >
-            Start Walk
-          </Text>
-        </TouchableOpacity>
+    <Text
+        style={{
+            fontSize: 16,
+            fontWeight: "bold",
+            marginTop: 25
+        }}
+    >
+        Start Walk
+    </Text>
+</TouchableOpacity>
 
         <TouchableOpacity
           style={{

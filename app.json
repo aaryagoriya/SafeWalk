@@ -40,6 +40,12 @@
           }
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SafeWalk uses your location to track your walk and detect route deviations."
+        }
+      ],
       "@react-native-google-signin/google-signin",
       "expo-web-browser"
     ],
