@@ -7,8 +7,6 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
     ScrollView
 } from "react-native";
 
@@ -23,12 +21,18 @@ import * as Location from "expo-location";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { addDoc, collection } from "firebase/firestore";
+import {
+    addDoc,
+    collection,
+    doc,
+    updateDoc
+} from "firebase/firestore";
 
 import { auth, db } from "../FirebaseConfig";
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
-    const earthRadius = 6371000;
+
+    const R = 6371000;
 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -39,13 +43,14 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
         Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) ** 2;
 
-    return earthRadius * 2 * Math.atan2(
+    return R * 2 * Math.atan2(
         Math.sqrt(a),
         Math.sqrt(1 - a)
     );
 };
 
 const formatDistance = distance => {
+
     if (!distance) {
         return "--";
     }
@@ -58,16 +63,46 @@ const formatDistance = distance => {
 };
 
 const getEta = distance => {
+
     if (!distance) {
         return "--";
     }
 
     const minutes = Math.max(
         1,
-        Math.round((distance / 1000) / 5 * 60)
+        Math.round(distance / 1000 / 5 * 60)
     );
 
     return `${minutes} min`;
+};
+
+const getPlaceName = async point => {
+
+    try {
+
+        const result = await Location.reverseGeocodeAsync(point);
+
+        if (!result.length) {
+            return "Current location";
+        }
+
+        const place = result[0];
+
+        const parts = [
+            place.name,
+            place.street,
+            place.city
+        ].filter(Boolean);
+
+        return [...new Set(parts)]
+            .slice(0, 3)
+            .join(", ");
+
+    } catch {
+
+        return "Current location";
+
+    }
 };
 
 const LiveMap = () => {
@@ -75,27 +110,29 @@ const LiveMap = () => {
     const router = useRouter();
 
     const [location, setLocation] = useState(null);
+    const [locationName, setLocationName] = useState("Getting location...");
     const [destination, setDestination] = useState("");
     const [destinationLocation, setDestinationLocation] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
     const [distance, setDistance] = useState(0);
-    const [walking, setWalking] = useState(false);
+    const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [walking, setWalking] = useState(false);
     const [warning, setWarning] = useState(false);
     const [countdown, setCountdown] = useState(15);
-    const [locations, setLocations] = useState([]);
 
     const mapRef = useRef(null);
     const subscription = useRef(null);
-    const warningTimer = useRef(null);
+    const timer = useRef(null);
     const searchTimer = useRef(null);
 
     const startLocation = useRef(null);
     const currentLocation = useRef(null);
+    const walkId = useRef(null);
     const startDistance = useRef(0);
-    const warningTriggered = useRef(false);
-    const locationsRef = useRef([]);
+    const warningShown = useRef(false);
+    const savedLocations = useRef([]);
 
     useEffect(() => {
 
@@ -107,8 +144,8 @@ const LiveMap = () => {
                 subscription.current.remove();
             }
 
-            if (warningTimer.current) {
-                clearInterval(warningTimer.current);
+            if (timer.current) {
+                clearInterval(timer.current);
             }
 
             if (searchTimer.current) {
@@ -123,17 +160,18 @@ const LiveMap = () => {
 
         try {
 
-            const { status } =
+            const permission =
                 await Location.requestForegroundPermissionsAsync();
 
-            if (status !== "granted") {
+            if (permission.status !== "granted") {
+
+                setLoading(false);
 
                 Alert.alert(
                     "Location Required",
-                    "Please allow SafeWalk to access your location."
+                    "Please allow SafeWalk to use your location."
                 );
 
-                setLoading(false);
                 return;
             }
 
@@ -152,6 +190,9 @@ const LiveMap = () => {
             startLocation.current = point;
             currentLocation.current = point;
 
+            const name = await getPlaceName(point);
+
+            setLocationName(name);
             setLoading(false);
 
         } catch (error) {
@@ -167,7 +208,7 @@ const LiveMap = () => {
 
     };
 
-    const useCurrentLocation = async () => {
+    const updateCurrentLocation = async () => {
 
         try {
 
@@ -186,19 +227,18 @@ const LiveMap = () => {
             startLocation.current = point;
             currentLocation.current = point;
 
-            if (mapRef.current) {
+            const name = await getPlaceName(point);
 
-                mapRef.current.animateToRegion(
-                    {
-                        latitude: point.latitude,
-                        longitude: point.longitude,
-                        latitudeDelta: 0.02,
-                        longitudeDelta: 0.02
-                    },
-                    500
-                );
+            setLocationName(name);
 
-            }
+            mapRef.current?.animateToRegion(
+                {
+                    ...point,
+                    latitudeDelta: 0.02,
+                    longitudeDelta: 0.02
+                },
+                500
+            );
 
         } catch (error) {
 
@@ -214,9 +254,7 @@ const LiveMap = () => {
     const searchPlaces = text => {
 
         setDestination(text);
-
         setDestinationLocation(null);
-
         setDistance(0);
 
         if (searchTimer.current) {
@@ -224,40 +262,35 @@ const LiveMap = () => {
         }
 
         if (text.trim().length < 2) {
-
             setSuggestions([]);
-
             return;
         }
 
-        searchTimer.current =
-            setTimeout(async () => {
+        searchTimer.current = setTimeout(async () => {
 
-                try {
+            try {
 
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&limit=5&addressdetails=1`,
-                        {
-                            headers: {
-                                Accept:
-                                    "application/json",
-                                "User-Agent":
-                                    "SafeWalk Student App"
-                            }
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&limit=5&addressdetails=1`,
+                    {
+                        headers: {
+                            Accept: "application/json",
+                            "User-Agent": "SafeWalk Student App"
                         }
-                    );
+                    }
+                );
 
-                    const data = await response.json();
+                const data = await response.json();
 
-                    setSuggestions(data);
+                setSuggestions(data);
 
-                } catch (error) {
+            } catch {
 
-                    setSuggestions([]);
+                setSuggestions([]);
 
-                }
+            }
 
-            }, 500);
+        }, 500);
 
     };
 
@@ -268,46 +301,119 @@ const LiveMap = () => {
             longitude: Number(place.lon)
         };
 
-        setDestination(
-            place.display_name.split(",").slice(0, 2).join(",")
-        );
+        const name = place.display_name
+            .split(",")
+            .slice(0, 2)
+            .join(",");
 
+        setDestination(name);
         setDestinationLocation(point);
         setSuggestions([]);
 
         if (startLocation.current) {
 
-            const newDistance =
-                getDistance(
-                    startLocation.current.latitude,
-                    startLocation.current.longitude,
-                    point.latitude,
-                    point.longitude
-                );
+            const newDistance = getDistance(
+                startLocation.current.latitude,
+                startLocation.current.longitude,
+                point.latitude,
+                point.longitude
+            );
 
             setDistance(newDistance);
 
-            if (mapRef.current) {
-
-                mapRef.current.fitToCoordinates(
-                    [
-                        startLocation.current,
-                        point
-                    ],
-                    {
-                        edgePadding: {
-                            top: 70,
-                            right: 40,
-                            bottom: 70,
-                            left: 40
-                        },
-                        animated: true
-                    }
-                );
-
-            }
+            mapRef.current?.fitToCoordinates(
+                [
+                    startLocation.current,
+                    point
+                ],
+                {
+                    edgePadding: {
+                        top: 80,
+                        right: 50,
+                        bottom: 80,
+                        left: 50
+                    },
+                    animated: true
+                }
+            );
 
         }
+
+    };
+
+    const createWalk = async () => {
+
+        const user = auth.currentUser;
+
+        if (!user) {
+
+            Alert.alert(
+                "Not Logged In",
+                "Please sign in first."
+            );
+
+            return null;
+        }
+
+        const walk = {
+
+            destination: destination,
+
+            startLocation: startLocation.current,
+
+            destinationLocation: destinationLocation,
+
+            startedAt: new Date().toISOString(),
+
+            endedAt: null,
+
+            distance: 0,
+
+            arrived: false,
+
+            status: "active"
+
+        };
+
+        const result = await addDoc(
+            collection(
+                db,
+                "users",
+                user.uid,
+                "walks"
+            ),
+            walk
+        );
+
+        walkId.current = result.id;
+
+        return result.id;
+
+    };
+
+    const saveLocation = async point => {
+
+        const user = auth.currentUser;
+
+        if (!user || !walkId.current) {
+            return;
+        }
+
+        await addDoc(
+            collection(
+                db,
+                "users",
+                user.uid,
+                "walks",
+                walkId.current,
+                "locations"
+            ),
+            {
+                latitude: point.latitude,
+                longitude: point.longitude,
+                timestamp: new Date().toISOString()
+            }
+        );
 
     };
 
@@ -315,19 +421,9 @@ const LiveMap = () => {
 
         if (!destinationLocation) {
 
-            if (!destination.trim()) {
-
-                Alert.alert(
-                    "Destination Required",
-                    "Please enter and select a destination."
-                );
-
-                return;
-            }
-
             Alert.alert(
                 "Select Destination",
-                "Please select a place from the suggestions."
+                "Choose a destination from the suggestions."
             );
 
             return;
@@ -343,159 +439,171 @@ const LiveMap = () => {
             return;
         }
 
-        const firstDistance =
-            getDistance(
+        try {
+
+            setSaving(true);
+
+            const firstDistance = getDistance(
                 startLocation.current.latitude,
                 startLocation.current.longitude,
                 destinationLocation.latitude,
                 destinationLocation.longitude
             );
 
-        if (firstDistance < 30) {
+            if (firstDistance < 30) {
 
-            Alert.alert(
-                "Already There",
-                "You are already at the destination."
-            );
+                setSaving(false);
 
-            return;
-        }
+                Alert.alert(
+                    "Already There",
+                    "You are already at your destination."
+                );
 
-        setDistance(firstDistance);
-        setWalking(true);
+                return;
+            }
 
-        startDistance.current = firstDistance;
-        warningTriggered.current = false;
+            const id = await createWalk();
 
-        const firstPoint = {
-            latitude: startLocation.current.latitude,
-            longitude: startLocation.current.longitude,
-            timestamp: new Date().toISOString()
-        };
+            if (!id) {
+                setSaving(false);
+                return;
+            }
 
-        locationsRef.current = [firstPoint];
+            const firstPoint = {
+                latitude: startLocation.current.latitude,
+                longitude: startLocation.current.longitude,
+                timestamp: new Date().toISOString()
+            };
 
-        setLocations([firstPoint]);
+            savedLocations.current = [firstPoint];
 
-        subscription.current =
-            await Location.watchPositionAsync(
-                {
-                    accuracy: Location.Accuracy.High,
-                    distanceInterval: 5,
-                    timeInterval: 3000
-                },
-                newLocation => {
+            setLocations([firstPoint]);
+            setDistance(firstDistance);
+            setWalking(true);
+            startDistance.current = firstDistance;
+            warningShown.current = false;
 
-                    const point = {
-                        latitude:
-                            newLocation.coords.latitude,
-                        longitude:
-                            newLocation.coords.longitude
-                    };
+            await saveLocation(firstPoint);
 
-                    const savedPoint = {
-                        ...point,
-                        timestamp:
-                            new Date().toISOString()
-                    };
+            setSaving(false);
 
-                    setLocation(point);
+            subscription.current =
+                await Location.watchPositionAsync(
+                    {
+                        accuracy: Location.Accuracy.High,
+                        distanceInterval: 5,
+                        timeInterval: 3000
+                    },
+                    async result => {
 
-                    currentLocation.current = point;
+                        const point = {
+                            latitude: result.coords.latitude,
+                            longitude: result.coords.longitude
+                        };
 
-                    locationsRef.current = [
-                        ...locationsRef.current,
-                        savedPoint
-                    ];
+                        const savedPoint = {
+                            ...point,
+                            timestamp: new Date().toISOString()
+                        };
 
-                    setLocations([
-                        ...locationsRef.current
-                    ]);
+                        setLocation(point);
 
-                    const newDistance =
-                        getDistance(
+                        currentLocation.current = point;
+
+                        savedLocations.current = [
+                            ...savedLocations.current,
+                            savedPoint
+                        ];
+
+                        setLocations([
+                            ...savedLocations.current
+                        ]);
+
+                        await saveLocation(savedPoint);
+
+                        const newDistance = getDistance(
                             point.latitude,
                             point.longitude,
                             destinationLocation.latitude,
                             destinationLocation.longitude
                         );
 
-                    setDistance(newDistance);
+                        setDistance(newDistance);
 
-                    if (
-                        newDistance < 30 &&
-                        !warningTriggered.current
-                    ) {
+                        if (
+                            newDistance < 30 &&
+                            !warningShown.current
+                        ) {
 
-                        finishWalk(true);
+                            finishWalk(true);
 
-                        return;
+                            return;
+                        }
+
+                        if (
+                            newDistance >
+                                startDistance.current + 300 &&
+                            !warningShown.current
+                        ) {
+
+                            showWarning();
+
+                        }
+
                     }
+                );
 
-                    if (
-                        newDistance >
-                        startDistance.current + 300 &&
-                        !warningTriggered.current
-                    ) {
+        } catch (error) {
 
-                        showWarning();
+            setSaving(false);
 
-                    }
-
-                }
+            Alert.alert(
+                "Walk Error",
+                error.message
             );
+
+        }
 
     };
 
     const showWarning = () => {
 
-        warningTriggered.current = true;
-
+        warningShown.current = true;
         setWarning(true);
         setCountdown(15);
 
-        warningTimer.current =
-            setInterval(() => {
+        timer.current = setInterval(() => {
 
-                setCountdown(value => {
+            setCountdown(value => {
 
-                    if (value <= 1) {
+                if (value <= 1) {
 
-                        clearInterval(
-                            warningTimer.current
-                        );
+                    clearInterval(timer.current);
+                    timer.current = null;
 
-                        warningTimer.current = null;
+                    alertContacts();
 
-                        alertContacts();
+                    return 0;
+                }
 
-                        return 0;
-                    }
+                return value - 1;
 
-                    return value - 1;
+            });
 
-                });
-
-            }, 1000);
+        }, 1000);
 
     };
 
     const cancelWarning = () => {
 
-        if (warningTimer.current) {
-
-            clearInterval(
-                warningTimer.current
-            );
-
-            warningTimer.current = null;
-
+        if (timer.current) {
+            clearInterval(timer.current);
+            timer.current = null;
         }
 
         setWarning(false);
         setCountdown(15);
-
-        warningTriggered.current = false;
+        warningShown.current = false;
 
     };
 
@@ -503,7 +611,7 @@ const LiveMap = () => {
 
         const user = auth.currentUser;
 
-        if (user) {
+        if (user && walkId.current) {
 
             try {
 
@@ -512,20 +620,31 @@ const LiveMap = () => {
                         db,
                         "users",
                         user.uid,
-                        "walkAlerts"
+                        "walks",
+                        walkId.current,
+                        "alerts"
                     ),
                     {
-                        destination,
+                        type: "route_deviation",
                         latitude:
-                            currentLocation.current?.latitude ||
-                            null,
+                            currentLocation.current?.latitude,
                         longitude:
-                            currentLocation.current?.longitude ||
-                            null,
-                        message:
-                            "SafeWalk detected a route deviation.",
+                            currentLocation.current?.longitude,
                         createdAt:
                             new Date().toISOString()
+                    }
+                );
+
+                await updateDoc(
+                    doc(
+                        db,
+                        "users",
+                        user.uid,
+                        "walks",
+                        walkId.current
+                    ),
+                    {
+                        status: "alerted"
                     }
                 );
 
@@ -552,107 +671,88 @@ const LiveMap = () => {
             return;
         }
 
-        setSaving(true);
+        try {
 
-        if (subscription.current) {
+            setSaving(true);
 
-            subscription.current.remove();
+            if (subscription.current) {
+                subscription.current.remove();
+                subscription.current = null;
+            }
 
-            subscription.current = null;
+            if (timer.current) {
+                clearInterval(timer.current);
+                timer.current = null;
+            }
 
-        }
+            const user = auth.currentUser;
 
-        if (warningTimer.current) {
+            if (user && walkId.current) {
 
-            clearInterval(
-                warningTimer.current
-            );
-
-            warningTimer.current = null;
-
-        }
-
-        const user = auth.currentUser;
-
-        if (user) {
-
-            try {
-
-                await addDoc(
-                    collection(
+                await updateDoc(
+                    doc(
                         db,
                         "users",
                         user.uid,
-                        "walks"
+                        "walks",
+                        walkId.current
                     ),
                     {
-                        destination,
-                        startLocation:
-                            startLocation.current,
-                        destinationLocation,
-                        locations:
-                            locationsRef.current,
-                        startedAt:
-                            locationsRef.current[0]?.timestamp ||
-                            new Date().toISOString(),
                         endedAt:
                             new Date().toISOString(),
-                        arrived: arrived || false
+
+                        distance: distance,
+
+                        arrived: arrived,
+
+                        status:
+                            arrived
+                                ? "completed"
+                                : "ended"
                     }
                 );
 
-            } catch (error) {
-
-                setSaving(false);
-
-                Alert.alert(
-                    "Save Error",
-                    error.message
-                );
-
-                return;
             }
 
+            setWalking(false);
+            setWarning(false);
+            setSaving(false);
+
+            Alert.alert(
+                arrived
+                    ? "You Arrived"
+                    : "Walk Ended",
+                arrived
+                    ? "You reached your destination."
+                    : "Your walk has been saved."
+            );
+
+            router.back();
+
+        } catch (error) {
+
+            setSaving(false);
+
+            Alert.alert(
+                "Save Error",
+                error.message
+            );
+
         }
-
-        setWalking(false);
-        setWarning(false);
-        setSaving(false);
-
-        Alert.alert(
-            arrived
-                ? "You Arrived"
-                : "Walk Ended",
-            "Your walk has been saved."
-        );
-
-        router.back();
 
     };
 
     if (loading) {
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "white"
-                }}
-            >
+            <View style={styles.center}>
 
                 <ActivityIndicator
                     size="large"
                     color="#2463FF"
                 />
 
-                <Text
-                    style={{
-                        marginTop: 15,
-                        fontSize: 16
-                    }}
-                >
+                <Text style={styles.loadingText}>
                     Getting your location...
                 </Text>
 
@@ -664,48 +764,32 @@ const LiveMap = () => {
     if (!location) {
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 30
-                }}
-            >
+            <View style={styles.center}>
 
-                <Ionicons
-                    name="location-outline"
-                    size={60}
-                    color="#2463FF"
-                />
+                <View style={styles.iconCircle}>
 
-                <Text
-                    style={{
-                        fontSize: 22,
-                        fontWeight: "bold",
-                        marginTop: 20
-                    }}
-                >
-                    Location is required
+                    <Ionicons
+                        name="location-outline"
+                        size={42}
+                        color="#2463FF"
+                    />
+
+                </View>
+
+                <Text style={styles.emptyTitle}>
+                    Location Required
+                </Text>
+
+                <Text style={styles.emptyText}>
+                    SafeWalk needs your location to track your walk.
                 </Text>
 
                 <TouchableOpacity
                     onPress={getCurrentLocation}
-                    style={{
-                        marginTop: 25,
-                        backgroundColor: "#2463FF",
-                        paddingHorizontal: 30,
-                        paddingVertical: 15,
-                        borderRadius: 15
-                    }}
+                    style={styles.primaryButton}
                 >
 
-                    <Text
-                        style={{
-                            color: "white",
-                            fontWeight: "bold"
-                        }}
-                    >
+                    <Text style={styles.buttonText}>
                         Try Again
                     </Text>
 
@@ -719,103 +803,48 @@ const LiveMap = () => {
     if (warning) {
 
         return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: "white",
-                    paddingHorizontal: 45,
-                    justifyContent: "center",
-                    alignItems: "center"
-                }}
-            >
+            <View style={styles.warningScreen}>
 
-                <Ionicons
-                    name="warning-outline"
-                    size={100}
-                    color="#FFB800"
-                />
+                <View style={styles.warningIcon}>
 
-                <Text
-                    style={{
-                        fontSize: 36,
-                        fontWeight: "bold",
-                        marginTop: 35
-                    }}
-                >
+                    <Ionicons
+                        name="warning"
+                        size={55}
+                        color="#F5B400"
+                    />
+
+                </View>
+
+                <Text style={styles.warningTitle}>
                     Are you OK?
                 </Text>
 
-                <Text
-                    style={{
-                        color: "#888",
-                        fontSize: 20,
-                        textAlign: "center",
-                        lineHeight: 28,
-                        marginTop: 25
-                    }}
-                >
+                <Text style={styles.warningText}>
                     It looks like you've deviated{"\n"}
-                    from your planned route
+                    from your planned route.
                 </Text>
 
-                <Text
-                    style={{
-                        color: "#888",
-                        fontSize: 20,
-                        textAlign: "center",
-                        marginTop: 25
-                    }}
-                >
+                <Text style={styles.warningText}>
                     Please confirm that you're safe.
                 </Text>
 
                 <TouchableOpacity
                     onPress={cancelWarning}
-                    style={{
-                        width: "100%",
-                        height: 52,
-                        backgroundColor: "#20B843",
-                        borderRadius: 16,
-                        justifyContent: "center",
-                        alignItems: "center",
-                        marginTop: 60
-                    }}
+                    style={styles.okButton}
                 >
 
-                    <Text
-                        style={{
-                            color: "white",
-                            fontSize: 20,
-                            fontWeight: "bold"
-                        }}
-                    >
+                    <Text style={styles.buttonText}>
                         YES, I'M OK
                     </Text>
 
                 </TouchableOpacity>
 
-                <Text
-                    style={{
-                        color: "#888",
-                        fontSize: 20,
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        lineHeight: 28,
-                        marginTop: 60
-                    }}
-                >
-                    if you don't respond{"\n"}
+                <Text style={styles.alertText}>
+                    If you don't respond,{"\n"}
                     we'll alert your contacts in
                 </Text>
 
-                <Text
-                    style={{
-                        color: "#F52F38",
-                        fontSize: 64,
-                        fontWeight: "bold",
-                        marginTop: 25
-                    }}
-                >
+                <Text style={styles.countdown}>
                     00:{String(countdown).padStart(2, "0")}
                 </Text>
 
@@ -825,637 +854,715 @@ const LiveMap = () => {
     }
 
     return (
-        <KeyboardAvoidingView
-            style={{
-                flex: 1,
-                backgroundColor: "#F8FAFF"
+        <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+                paddingBottom: 35
             }}
-            behavior={
-                Platform.OS === "ios"
-                    ? "padding"
-                    : undefined
-            }
+            style={styles.container}
         >
 
-            <ScrollView
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                    paddingBottom: 30
-                }}
-            >
+            <View style={styles.header}>
 
-                <View
-                    style={{
-                        paddingTop: 55,
-                        paddingHorizontal: 20
-                    }}
-                >
-
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                    >
-
-                        <Ionicons
-                            name="chevron-back"
-                            size={38}
-                            color="#101A35"
-                        />
-
-                    </TouchableOpacity>
-
-                    <Text
-                        style={{
-                            textAlign: "center",
-                            fontSize: 38,
-                            fontWeight: "bold",
-                            color: "#101A35",
-                            marginTop: -35
-                        }}
-                    >
-                        Start Walk
-                    </Text>
-
-                    <Text
-                        style={{
-                            textAlign: "center",
-                            fontSize: 19,
-                            color: "#6D7897",
-                            marginTop: 10
-                        }}
-                    >
-                        Pick your destination and let us keep you safe.
-                    </Text>
-
-                </View>
-
-                <View
-                    style={{
-                        marginTop: 30,
-                        marginHorizontal: 20,
-                        height: 70,
-                        backgroundColor: "#EEF1F8",
-                        borderRadius: 27,
-                        flexDirection: "row",
-                        padding: 5
-                    }}
-                >
-
-                    <TouchableOpacity
-                        style={{
-                            flex: 1,
-                            backgroundColor: "#2463FF",
-                            borderRadius: 22,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            flexDirection: "row"
-                        }}
-                    >
-
-                        <Ionicons
-                            name="location"
-                            size={26}
-                            color="white"
-                        />
-
-                        <Text
-                            style={{
-                                color: "white",
-                                fontSize: 17,
-                                marginLeft: 10
-                            }}
-                        >
-                            Enter Location
-                        </Text>
-
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={useCurrentLocation}
-                        style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            flexDirection: "row"
-                        }}
-                    >
-
-                        <Ionicons
-                            name="locate"
-                            size={27}
-                            color="#101A35"
-                        />
-
-                        <Text
-                            style={{
-                                color: "#101A35",
-                                fontSize: 16,
-                                marginLeft: 8
-                            }}
-                        >
-                            Use Current Location
-                        </Text>
-
-                    </TouchableOpacity>
-
-                </View>
-
-                <View
-                    style={{
-                        marginHorizontal: 20,
-                        marginTop: 18,
-                        backgroundColor: "white",
-                        borderRadius: 25,
-                        borderWidth: 1,
-                        borderColor: "#E1E6F0",
-                        minHeight: 85,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        paddingHorizontal: 18
-                    }}
-                >
-
-                    <View
-                        style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 17,
-                            backgroundColor: "#EAF0FF",
-                            justifyContent: "center",
-                            alignItems: "center"
-                        }}
-                    >
-
-                        <View
-                            style={{
-                                width: 13,
-                                height: 13,
-                                borderRadius: 7,
-                                backgroundColor: "#2463FF"
-                            }}
-                        />
-
-                    </View>
-
-                    <View
-                        style={{
-                            flex: 1,
-                            marginLeft: 15
-                        }}
-                    >
-
-                        <Text
-                            style={{
-                                color: "#7180A2",
-                                fontSize: 16
-                            }}
-                        >
-                            Current Location
-                        </Text>
-
-                        <Text
-                            numberOfLines={1}
-                            style={{
-                                color: "#101A35",
-                                fontSize: 18,
-                                marginTop: 5
-                            }}
-                        >
-                            Your current location
-                        </Text>
-
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={useCurrentLocation}
-                    >
-
-                        <Ionicons
-                            name="navigate-outline"
-                            size={29}
-                            color="#101A35"
-                        />
-
-                    </TouchableOpacity>
-
-                </View>
-
-                <View
-                    style={{
-                        marginHorizontal: 20,
-                        marginTop: 18,
-                        backgroundColor: "white",
-                        borderRadius: 25,
-                        borderWidth: 1,
-                        borderColor: "#E1E6F0",
-                        minHeight: 85,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        paddingHorizontal: 18
-                    }}
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={styles.backButton}
                 >
 
                     <Ionicons
-                        name="location"
-                        size={32}
-                        color="#F4475D"
+                        name="chevron-back"
+                        size={26}
+                        color="#101A35"
                     />
 
-                    <TextInput
-                        value={destination}
-                        onChangeText={searchPlaces}
-                        placeholder="Enter destination"
-                        placeholderTextColor="#9BA5BC"
-                        style={{
-                            flex: 1,
-                            fontSize: 18,
-                            color: "#101A35",
-                            marginLeft: 15
-                        }}
+                </TouchableOpacity>
+
+                <Text style={styles.title}>
+                    Start Walk
+                </Text>
+
+                <Text style={styles.subtitle}>
+                    Pick your destination and stay safe.
+                </Text>
+
+            </View>
+
+            <View style={styles.locationCard}>
+
+                <View style={styles.locationIcon}>
+
+                    <Ionicons
+                        name="navigate"
+                        size={21}
+                        color="#2463FF"
                     />
-
-                    {destination.length > 0 && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                setDestination("");
-                                setSuggestions([]);
-                                setDestinationLocation(null);
-                                setDistance(0);
-                            }}
-                        >
-
-                            <Ionicons
-                                name="close"
-                                size={28}
-                                color="#7180A2"
-                            />
-
-                        </TouchableOpacity>
-                    )}
 
                 </View>
 
-                {suggestions.length > 0 && (
-                    <View
-                        style={{
-                            marginHorizontal: 20,
-                            backgroundColor: "white",
-                            borderRadius: 18,
-                            borderWidth: 1,
-                            borderColor: "#E1E6F0",
-                            marginTop: 5,
-                            overflow: "hidden",
-                            elevation: 5
-                        }}
+                <View style={{ flex: 1 }}>
+
+                    <Text style={styles.label}>
+                        Current Location
+                    </Text>
+
+                    <Text
+                        numberOfLines={1}
+                        style={styles.locationText}
                     >
-
-                        {suggestions.map((place, index) => (
-
-                            <TouchableOpacity
-                                key={`${place.place_id}-${index}`}
-                                onPress={() =>
-                                    selectPlace(place)
-                                }
-                                style={{
-                                    minHeight: 62,
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    paddingHorizontal: 15,
-                                    borderBottomWidth:
-                                        index === suggestions.length - 1
-                                            ? 0
-                                            : 1,
-                                    borderBottomColor: "#EEF1F6"
-                                }}
-                            >
-
-                                <Ionicons
-                                    name="location-outline"
-                                    size={25}
-                                    color="#2463FF"
-                                />
-
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        marginLeft: 12
-                                    }}
-                                >
-
-                                    <Text
-                                        numberOfLines={1}
-                                        style={{
-                                            fontSize: 16,
-                                            fontWeight: "600",
-                                            color: "#101A35"
-                                        }}
-                                    >
-                                        {place.display_name
-                                            .split(",")
-                                            .slice(0, 2)
-                                            .join(",")}
-                                    </Text>
-
-                                    <Text
-                                        numberOfLines={1}
-                                        style={{
-                                            fontSize: 13,
-                                            color: "#8993AA",
-                                            marginTop: 3
-                                        }}
-                                    >
-                                        {place.display_name}
-                                    </Text>
-
-                                </View>
-
-                            </TouchableOpacity>
-
-                        ))}
-
-                    </View>
-                )}
-
-                <View
-                    style={{
-                        marginHorizontal: 20,
-                        marginTop: 18,
-                        height: 95,
-                        backgroundColor: "white",
-                        borderRadius: 25,
-                        borderWidth: 1,
-                        borderColor: "#E1E6F0",
-                        flexDirection: "row"
-                    }}
-                >
-
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            paddingLeft: 20
-                        }}
-                    >
-
-                        <Ionicons
-                            name="time-outline"
-                            size={29}
-                            color="#101A35"
-                        />
-
-                        <Text
-                            style={{
-                                color: "#7180A2",
-                                fontSize: 14,
-                                position: "absolute",
-                                left: 65,
-                                top: 17
-                            }}
-                        >
-                            Estimated Time
-                        </Text>
-
-                        <Text
-                            style={{
-                                color: "#101A35",
-                                fontSize: 18,
-                                fontWeight: "500",
-                                position: "absolute",
-                                left: 65,
-                                top: 43
-                            }}
-                        >
-                            {getEta(distance)}
-                        </Text>
-
-                    </View>
-
-                    <View
-                        style={{
-                            width: 1,
-                            height: 65,
-                            backgroundColor: "#E1E6F0",
-                            alignSelf: "center"
-                        }}
-                    />
-
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            paddingLeft: 20
-                        }}
-                    >
-
-                        <Ionicons
-                            name="shield-checkmark-outline"
-                            size={29}
-                            color="#101A35"
-                        />
-
-                        <Text
-                            style={{
-                                color: "#7180A2",
-                                fontSize: 14,
-                                position: "absolute",
-                                left: 65,
-                                top: 17
-                            }}
-                        >
-                            Route Status
-                        </Text>
-
-                        <Text
-                            style={{
-                                color: "#101A35",
-                                fontSize: 18,
-                                fontWeight: "600",
-                                position: "absolute",
-                                left: 65,
-                                top: 43
-                            }}
-                        >
-                            {destinationLocation
-                                ? "Mostly Safe"
-                                : "--"}
-                        </Text>
-
-                    </View>
-
-                </View>
-
-                <View
-                    style={{
-                        marginHorizontal: 20,
-                        marginTop: 18,
-                        height: 310,
-                        borderRadius: 25,
-                        overflow: "hidden"
-                    }}
-                >
-
-                    <MapView
-                        ref={mapRef}
-                        style={{
-                            flex: 1
-                        }}
-                        initialRegion={{
-                            latitude:
-                                location.latitude,
-                            longitude:
-                                location.longitude,
-                            latitudeDelta: 0.025,
-                            longitudeDelta: 0.025
-                        }}
-                        showsUserLocation={true}
-                        showsMyLocationButton={false}
-                    >
-
-                        <Marker
-                            coordinate={location}
-                            title="You are here"
-                        />
-
-                        {destinationLocation && (
-                            <Marker
-                                coordinate={
-                                    destinationLocation
-                                }
-                                title="Destination"
-                            />
-                        )}
-
-                        {destinationLocation && (
-                            <Polyline
-                                coordinates={[
-                                    location,
-                                    destinationLocation
-                                ]}
-                                strokeWidth={4}
-                            />
-                        )}
-
-                        {locations.length > 1 && (
-                            <Polyline
-                                coordinates={locations}
-                                strokeWidth={5}
-                            />
-                        )}
-
-                    </MapView>
-
-                    <View
-                        style={{
-                            position: "absolute",
-                            bottom: 65,
-                            left: 15,
-                            backgroundColor: "#2463FF",
-                            paddingHorizontal: 13,
-                            paddingVertical: 7,
-                            borderRadius: 15
-                        }}
-                    >
-
-                        <Text
-                            style={{
-                                color: "white",
-                                fontSize: 13,
-                                fontWeight: "bold"
-                            }}
-                        >
-                            You are here
-                        </Text>
-
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={useCurrentLocation}
-                        style={{
-                            position: "absolute",
-                            right: 15,
-                            bottom: 15,
-                            width: 55,
-                            height: 55,
-                            borderRadius: 30,
-                            backgroundColor: "white",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            elevation: 5
-                        }}
-                    >
-
-                        <Ionicons
-                            name="locate"
-                            size={28}
-                            color="#101A35"
-                        />
-
-                    </TouchableOpacity>
+                        {locationName}
+                    </Text>
 
                 </View>
 
                 <TouchableOpacity
-                    onPress={startWalk}
-                    disabled={saving}
-                    style={{
-                        marginHorizontal: 20,
-                        marginTop: 20,
-                        height: 70,
-                        backgroundColor: "#2463FF",
-                        borderRadius: 25,
-                        justifyContent: "center",
-                        alignItems: "center"
-                    }}
+                    onPress={updateCurrentLocation}
                 >
 
-                    <Text
-                        style={{
-                            color: "white",
-                            fontSize: 21,
-                            fontWeight: "bold"
-                        }}
-                    >
-                        Start Walk
-                    </Text>
+                    <Ionicons
+                        name="locate-outline"
+                        size={27}
+                        color="#101A35"
+                    />
 
                 </TouchableOpacity>
 
-                {walking && (
+            </View>
+
+            <View style={styles.destinationCard}>
+
+                <View style={styles.destinationIcon}>
+
+                    <Ionicons
+                        name="location"
+                        size={21}
+                        color="#F0445D"
+                    />
+
+                </View>
+
+                <TextInput
+                    value={destination}
+                    onChangeText={searchPlaces}
+                    placeholder="Where are you going?"
+                    placeholderTextColor="#9AA4B8"
+                    style={styles.destinationInput}
+                />
+
+                {destination.length > 0 && (
                     <TouchableOpacity
-                        onPress={() =>
-                            finishWalk(false)
-                        }
-                        disabled={saving}
-                        style={{
-                            marginHorizontal: 20,
-                            marginTop: 12,
-                            height: 60,
-                            backgroundColor: "#F44747",
-                            borderRadius: 20,
-                            justifyContent: "center",
-                            alignItems: "center"
+                        onPress={() => {
+                            setDestination("");
+                            setDestinationLocation(null);
+                            setSuggestions([]);
+                            setDistance(0);
                         }}
                     >
 
-                        <Text
-                            style={{
-                                color: "white",
-                                fontSize: 18,
-                                fontWeight: "bold"
-                            }}
-                        >
-                            {saving
-                                ? "Saving Walk..."
-                                : "End Walk"}
-                        </Text>
+                        <Ionicons
+                            name="close-circle"
+                            size={22}
+                            color="#9AA4B8"
+                        />
 
                     </TouchableOpacity>
                 )}
 
-            </ScrollView>
+            </View>
 
-        </KeyboardAvoidingView>
+            {suggestions.length > 0 && (
+
+                <View style={styles.suggestions}>
+
+                    {suggestions.map((place, index) => (
+
+                        <TouchableOpacity
+                            key={place.place_id}
+                            onPress={() => selectPlace(place)}
+                            style={{
+                                ...styles.suggestion,
+                                borderBottomWidth:
+                                    index === suggestions.length - 1
+                                        ? 0
+                                        : 1
+                            }}
+                        >
+
+                            <View style={styles.suggestionIcon}>
+
+                                <Ionicons
+                                    name="location-outline"
+                                    size={20}
+                                    color="#2463FF"
+                                />
+
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+
+                                <Text
+                                    numberOfLines={1}
+                                    style={styles.suggestionTitle}
+                                >
+                                    {place.display_name
+                                        .split(",")
+                                        .slice(0, 2)
+                                        .join(",")}
+                                </Text>
+
+                                <Text
+                                    numberOfLines={1}
+                                    style={styles.suggestionText}
+                                >
+                                    {place.display_name}
+                                </Text>
+
+                            </View>
+
+                        </TouchableOpacity>
+
+                    ))}
+
+                </View>
+
+            )}
+
+            <View style={styles.mapContainer}>
+
+                <MapView
+                    ref={mapRef}
+                    style={{ flex: 1 }}
+                    initialRegion={{
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        latitudeDelta: 0.025,
+                        longitudeDelta: 0.025
+                    }}
+                    showsUserLocation
+                    showsMyLocationButton={false}
+                >
+
+                    <Marker
+                        coordinate={location}
+                        title="You are here"
+                    />
+
+                    {destinationLocation && (
+                        <Marker
+                            coordinate={destinationLocation}
+                            title="Destination"
+                        />
+                    )}
+
+                    {destinationLocation && (
+                        <Polyline
+                            coordinates={[
+                                location,
+                                destinationLocation
+                            ]}
+                            strokeWidth={4}
+                        />
+                    )}
+
+                    {locations.length > 1 && (
+                        <Polyline
+                            coordinates={locations}
+                            strokeWidth={5}
+                        />
+                    )}
+
+                </MapView>
+
+                <View style={styles.mapLabel}>
+
+                    <Ionicons
+                        name="navigate"
+                        size={14}
+                        color="white"
+                    />
+
+                    <Text style={styles.mapLabelText}>
+                        You are here
+                    </Text>
+
+                </View>
+
+                <TouchableOpacity
+                    onPress={updateCurrentLocation}
+                    style={styles.mapButton}
+                >
+
+                    <Ionicons
+                        name="locate"
+                        size={25}
+                        color="#101A35"
+                    />
+
+                </TouchableOpacity>
+
+            </View>
+
+            <View style={styles.stats}>
+
+                <View style={styles.stat}>
+
+                    <Text style={styles.statValue}>
+                        {formatDistance(distance)}
+                    </Text>
+
+                    <Text style={styles.statLabel}>
+                        Distance
+                    </Text>
+
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.stat}>
+
+                    <Text style={styles.statValue}>
+                        {getEta(distance)}
+                    </Text>
+
+                    <Text style={styles.statLabel}>
+                        Estimated Time
+                    </Text>
+
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.stat}>
+
+                    <Ionicons
+                        name="shield-checkmark"
+                        size={24}
+                        color="#20B843"
+                    />
+
+                    <Text style={styles.statLabel}>
+                        {destinationLocation
+                            ? "Safe Route"
+                            : "Route Status"}
+                    </Text>
+
+                </View>
+
+            </View>
+
+            <TouchableOpacity
+                onPress={startWalk}
+                disabled={saving || walking}
+                style={styles.startButton}
+            >
+
+                {saving ? (
+
+                    <ActivityIndicator color="white" />
+
+                ) : (
+
+                    <>
+
+                        <Ionicons
+                            name="walk"
+                            size={23}
+                            color="white"
+                        />
+
+                        <Text style={styles.startButtonText}>
+                            Start Walk
+                        </Text>
+
+                    </>
+
+                )}
+
+            </TouchableOpacity>
+
+            {walking && (
+
+                <TouchableOpacity
+                    onPress={() => finishWalk(false)}
+                    disabled={saving}
+                    style={styles.endButton}
+                >
+
+                    <Ionicons
+                        name="stop-circle-outline"
+                        size={22}
+                        color="white"
+                    />
+
+                    <Text style={styles.buttonText}>
+                        {saving
+                            ? "Saving Walk..."
+                            : "End Walk"}
+                    </Text>
+
+                </TouchableOpacity>
+
+            )}
+
+        </ScrollView>
     );
+};
+
+const styles = {
+
+    container: {
+        flex: 1,
+        backgroundColor: "#F6F8FC"
+    },
+
+    center: {
+        flex: 1,
+        backgroundColor: "#F6F8FC",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 30
+    },
+
+    loadingText: {
+        marginTop: 14,
+        color: "#7180A2",
+        fontSize: 15
+    },
+
+    header: {
+        backgroundColor: "white",
+        paddingTop: 55,
+        paddingBottom: 25,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30
+    },
+
+    backButton: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: "#F1F4F9",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+
+    title: {
+        fontSize: 32,
+        fontWeight: "800",
+        color: "#101A35",
+        marginTop: 18
+    },
+
+    subtitle: {
+        fontSize: 15,
+        color: "#7180A2",
+        marginTop: 6
+    },
+
+    locationCard: {
+        margin: 20,
+        marginBottom: 10,
+        backgroundColor: "white",
+        minHeight: 76,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#E3E8F1",
+        paddingHorizontal: 15,
+        flexDirection: "row",
+        alignItems: "center"
+    },
+
+    locationIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        backgroundColor: "#EEF3FF",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12
+    },
+
+    label: {
+        fontSize: 13,
+        color: "#7B87A4"
+    },
+
+    locationText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#101A35",
+        marginTop: 4
+    },
+
+    destinationCard: {
+        marginHorizontal: 20,
+        backgroundColor: "white",
+        minHeight: 76,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#E3E8F1",
+        paddingHorizontal: 15,
+        flexDirection: "row",
+        alignItems: "center"
+    },
+
+    destinationIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        backgroundColor: "#FFF0F2",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12
+    },
+
+    destinationInput: {
+        flex: 1,
+        fontSize: 16,
+        color: "#101A35"
+    },
+
+    suggestions: {
+        marginHorizontal: 20,
+        marginTop: 6,
+        backgroundColor: "white",
+        borderRadius: 18,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#E3E8F1",
+        elevation: 4
+    },
+
+    suggestion: {
+        minHeight: 65,
+        paddingHorizontal: 14,
+        flexDirection: "row",
+        alignItems: "center",
+        borderBottomColor: "#EEF1F6"
+    },
+
+    suggestionIcon: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: "#EEF3FF",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10
+    },
+
+    suggestionTitle: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#101A35"
+    },
+
+    suggestionText: {
+        fontSize: 12,
+        color: "#8B95AA",
+        marginTop: 3
+    },
+
+    mapContainer: {
+        height: 300,
+        margin: 20,
+        marginTop: 18,
+        borderRadius: 22,
+        overflow: "hidden"
+    },
+
+    mapLabel: {
+        position: "absolute",
+        left: 15,
+        bottom: 15,
+        backgroundColor: "#2463FF",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 15,
+        flexDirection: "row",
+        alignItems: "center"
+    },
+
+    mapLabelText: {
+        color: "white",
+        fontSize: 12,
+        fontWeight: "700",
+        marginLeft: 5
+    },
+
+    mapButton: {
+        position: "absolute",
+        right: 15,
+        bottom: 15,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: "white",
+        justifyContent: "center",
+        alignItems: "center",
+        elevation: 5
+    },
+
+    stats: {
+        marginHorizontal: 20,
+        backgroundColor: "white",
+        minHeight: 100,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#E3E8F1",
+        flexDirection: "row",
+        alignItems: "center"
+    },
+
+    stat: {
+        flex: 1,
+        alignItems: "center"
+    },
+
+    statValue: {
+        fontSize: 19,
+        fontWeight: "800",
+        color: "#101A35"
+    },
+
+    statLabel: {
+        fontSize: 12,
+        color: "#7180A2",
+        marginTop: 5
+    },
+
+    divider: {
+        width: 1,
+        height: 50,
+        backgroundColor: "#E3E8F1"
+    },
+
+    startButton: {
+        margin: 20,
+        marginBottom: 0,
+        height: 62,
+        borderRadius: 20,
+        backgroundColor: "#2463FF",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "row"
+    },
+
+    startButtonText: {
+        color: "white",
+        fontSize: 18,
+        fontWeight: "800",
+        marginLeft: 8
+    },
+
+    endButton: {
+        marginHorizontal: 20,
+        marginTop: 12,
+        height: 56,
+        borderRadius: 18,
+        backgroundColor: "#F04444",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "row"
+    },
+
+    buttonText: {
+        color: "white",
+        fontSize: 17,
+        fontWeight: "700",
+        marginLeft: 7
+    },
+
+    iconCircle: {
+        width: 85,
+        height: 85,
+        borderRadius: 28,
+        backgroundColor: "#EEF3FF",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+
+    emptyTitle: {
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#101A35",
+        marginTop: 20
+    },
+
+    emptyText: {
+        color: "#7180A2",
+        fontSize: 15,
+        textAlign: "center",
+        lineHeight: 22,
+        marginTop: 8
+    },
+
+    primaryButton: {
+        marginTop: 25,
+        backgroundColor: "#2463FF",
+        paddingHorizontal: 32,
+        paddingVertical: 15,
+        borderRadius: 17
+    },
+
+    warningScreen: {
+        flex: 1,
+        backgroundColor: "white",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 35
+    },
+
+    warningIcon: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#FFF7D9",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+
+    warningTitle: {
+        fontSize: 34,
+        fontWeight: "800",
+        color: "#101010",
+        marginTop: 25
+    },
+
+    warningText: {
+        fontSize: 18,
+        color: "#777",
+        textAlign: "center",
+        lineHeight: 27,
+        marginTop: 18
+    },
+
+    okButton: {
+        width: "100%",
+        height: 58,
+        backgroundColor: "#20B843",
+        borderRadius: 17,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 40
+    },
+
+    alertText: {
+        color: "#777",
+        fontSize: 17,
+        fontWeight: "600",
+        textAlign: "center",
+        lineHeight: 25,
+        marginTop: 45
+    },
+
+    countdown: {
+        color: "#F04444",
+        fontSize: 58,
+        fontWeight: "800",
+        marginTop: 18
+    }
+
 };
 
 export default LiveMap;

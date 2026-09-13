@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
 
 import { useRouter } from "expo-router";
 
@@ -11,300 +16,487 @@ import { auth, db } from "../../FirebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 
 const Home = () => {
-  const router = useRouter();
 
-  const [name, setName] = useState("");
+    const router = useRouter();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const user = auth.currentUser;
+    const [name, setName] = useState("");
 
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
+    useEffect(() => {
 
-        const userData = await getDoc(userRef);
+        const getUser = async () => {
 
-        if (userData.exists()) {
-          const fullName = userData.data().name;
+            const user = auth.currentUser;
 
-          setName(fullName);
-        }
-      }
-    };
+            if (user) {
 
-    getUser();
-  }, []);
+                const userRef = doc(
+                    db,
+                    "users",
+                    user.uid
+                );
 
-  return (
-    <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: "white",
-      }}
-      contentContainerStyle={{
-        paddingHorizontal: 18,
-        paddingTop: 55,
-        paddingBottom: 30,
-      }}
-    >
-      <TouchableOpacity>
-        <Ionicons name="notifications-outline" size={38} color="black" />
-      </TouchableOpacity>
+                const userData = await getDoc(userRef);
 
-      <Text
-        style={{
-          fontSize: 34,
-          fontWeight: "bold",
-          marginTop: 30,
-        }}
-      >
-        Hi, {name}
-      </Text>
+                if (userData.exists()) {
 
-      <Text
-        style={{
-          fontSize: 16,
-          color: "black",
-          marginTop: 8,
-        }}
-      >
-        You’re all set, Make every walk safe.
-      </Text>
+                    const fullName = userData.data().name;
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginTop: 20,
-        }}
-      >
-        <TouchableOpacity
-    onPress={() => router.push("/Walk")}
-    style={{
-        width: "47%",
-        height: 182,
-        backgroundColor: "white",
-        borderRadius: 18,
-        elevation: 4,
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        alignItems: "center",
-        paddingTop: 36
-    }}
->
-    <View
-        style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: "#2455F5",
-            justifyContent: "center",
-            alignItems: "center"
-        }}
-    >
-        <Ionicons
-            name="navigate-outline"
-            size={48}
-            color="white"
-        />
-    </View>
+                    setName(fullName);
+                }
+            }
+        };
 
-    <Text
-        style={{
-            fontSize: 16,
-            fontWeight: "bold",
-            marginTop: 25
-        }}
-    >
-        Start Walk
-    </Text>
-</TouchableOpacity>
+        getUser();
 
-        <TouchableOpacity
-          style={{
-            width: "47%",
-            height: 182,
-            backgroundColor: "white",
-            borderRadius: 18,
-            elevation: 4,
-            shadowColor: "#000",
-            shadowOpacity: 0.15,
-            shadowRadius: 5,
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            alignItems: "center",
-            paddingTop: 36,
-          }}
+    }, []);
+
+    return (
+
+        <ScrollView
+
+            style={{
+                flex: 1,
+                backgroundColor: "#F7F8FC"
+            }}
+
+            contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingTop: 55,
+                paddingBottom: 35
+            }}
+
+            showsVerticalScrollIndicator={false}
+
         >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: "#5520F5",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="time-outline" size={48} color="white" />
-          </View>
 
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              marginTop: 25,
-            }}
-          >
-            Expected Arrival
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "flex-end"
+                }}
+            >
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginTop: 35,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => router.push("./Contact")}
-          style={{
-            width: "47%",
-            height: 182,
-            backgroundColor: "white",
-            borderRadius: 18,
-            elevation: 4,
-            shadowColor: "#000",
-            shadowOpacity: 0.15,
-            shadowRadius: 5,
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            alignItems: "center",
-            paddingTop: 36,
-          }}
-        >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: "#00B51A",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="people-outline" size={48} color="white" />
-          </View>
+                <TouchableOpacity
+                    style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 16,
+                        backgroundColor: "white",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        elevation: 3,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 5,
+                        shadowOffset: {
+                            width: 0,
+                            height: 2
+                        }
+                    }}
+                >
 
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              marginTop: 25,
-            }}
-          >
-            Emergency Contact
-          </Text>
-        </TouchableOpacity>
+                    <Ionicons
+                        name="notifications-outline"
+                        size={25}
+                        color="#111827"
+                    />
 
-        <TouchableOpacity
-          onPress={() => router.push("./Account")}
-          style={{
-            width: "47%",
-            height: 182,
-            backgroundColor: "white",
-            borderRadius: 18,
-            elevation: 4,
-            shadowColor: "#000",
-            shadowOpacity: 0.15,
-            shadowRadius: 5,
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            alignItems: "center",
-            paddingTop: 36,
-          }}
-        >
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: "#FFC21A",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="person-outline" size={48} color="white" />
-          </View>
+                </TouchableOpacity>
 
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              marginTop: 25,
-            }}
-          >
-            Account
-          </Text>
-        </TouchableOpacity>
-      </View>
+            </View>
 
-      <TouchableOpacity
-        onPress={() => router.push("SOS")}
-        style={{
-          height: 120,
-          backgroundColor: "#F82F35",
-          borderRadius: 20,
-          marginTop: 45,
-          flexDirection: "row",
-          alignItems: "center",
-          paddingHorizontal: 45,
-        }}
-      >
-        <Ionicons name="call-outline" size={75} color="white" />
+            <Text
+                style={{
+                    fontSize: 32,
+                    fontWeight: "bold",
+                    color: "#111827",
+                    marginTop: 28
+                }}
+            >
+                Hi, {name}
+            </Text>
 
-        <View
-          style={{
-            marginLeft: 40,
-          }}
-        >
-          <Text
-            style={{
-              color: "white",
-              fontSize: 48,
-              fontWeight: "bold",
-            }}
-          >
-            SOS
-          </Text>
+            <Text
+                style={{
+                    fontSize: 15,
+                    color: "#6B7280",
+                    marginTop: 7,
+                    marginBottom: 25
+                }}
+            >
+                You're all set. Make every walk safe.
+            </Text>
 
-          <Text
-            style={{
-              color: "white",
-              fontSize: 15,
-              fontWeight: "bold",
-              marginTop: -5,
-            }}
-          >
-            Tap to Send Alert
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between"
+                }}
+            >
+
+                <TouchableOpacity
+
+                    onPress={() => router.push("/Walk")}
+
+                    style={{
+                        width: "48%",
+                        height: 175,
+                        backgroundColor: "white",
+                        borderRadius: 22,
+                        elevation: 4,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 8,
+                        shadowOffset: {
+                            width: 0,
+                            height: 3
+                        },
+                        alignItems: "center",
+                        justifyContent: "center"
+                    }}
+
+                >
+
+                    <View
+                        style={{
+                            width: 70,
+                            height: 70,
+                            borderRadius: 20,
+                            backgroundColor: "#EEF2FF",
+                            justifyContent: "center",
+                            alignItems: "center"
+                        }}
+                    >
+
+                        <Ionicons
+                            name="navigate"
+                            size={34}
+                            color="#2455F5"
+                        />
+
+                    </View>
+
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: "bold",
+                            color: "#111827",
+                            marginTop: 18
+                        }}
+                    >
+                        Start Walk
+                    </Text>
+
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            color: "#9CA3AF",
+                            marginTop: 4
+                        }}
+                    >
+                        Track your journey
+                    </Text>
+
+                </TouchableOpacity>
+
+
+                <TouchableOpacity
+
+                    onPress={() => router.push("/WalkHistory")}
+
+                    style={{
+                        width: "48%",
+                        height: 175,
+                        backgroundColor: "white",
+                        borderRadius: 22,
+                        elevation: 4,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 8,
+                        shadowOffset: {
+                            width: 0,
+                            height: 3
+                        },
+                        alignItems: "center",
+                        justifyContent: "center"
+                    }}
+
+                >
+
+                    <View
+                        style={{
+                            width: 70,
+                            height: 70,
+                            borderRadius: 20,
+                            backgroundColor: "#F0EDFF",
+                            justifyContent: "center",
+                            alignItems: "center"
+                        }}
+                    >
+
+                        <Ionicons
+                            name="time"
+                            size={34}
+                            color="#5520F5"
+                        />
+
+                    </View>
+
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: "bold",
+                            color: "#111827",
+                            marginTop: 18
+                        }}
+                    >
+                        Past Walks
+                    </Text>
+
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            color: "#9CA3AF",
+                            marginTop: 4
+                        }}
+                    >
+                        View your history
+                    </Text>
+
+                </TouchableOpacity>
+
+            </View>
+
+
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginTop: 18
+                }}
+            >
+
+                <TouchableOpacity
+
+                    onPress={() => router.push("./Contact")}
+
+                    style={{
+                        width: "48%",
+                        height: 175,
+                        backgroundColor: "white",
+                        borderRadius: 22,
+                        elevation: 4,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 8,
+                        shadowOffset: {
+                            width: 0,
+                            height: 3
+                        },
+                        alignItems: "center",
+                        justifyContent: "center"
+                    }}
+
+                >
+
+                    <View
+                        style={{
+                            width: 70,
+                            height: 70,
+                            borderRadius: 20,
+                            backgroundColor: "#E9F9ED",
+                            justifyContent: "center",
+                            alignItems: "center"
+                        }}
+                    >
+
+                        <Ionicons
+                            name="people"
+                            size={34}
+                            color="#00B51A"
+                        />
+
+                    </View>
+
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: "bold",
+                            color: "#111827",
+                            marginTop: 18,
+                            textAlign: "center"
+                        }}
+                    >
+                        Emergency Contact
+                    </Text>
+
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            color: "#9CA3AF",
+                            marginTop: 4
+                        }}
+                    >
+                        Manage contacts
+                    </Text>
+
+                </TouchableOpacity>
+
+
+                <TouchableOpacity
+
+                    onPress={() => router.push("./Account")}
+
+                    style={{
+                        width: "48%",
+                        height: 175,
+                        backgroundColor: "white",
+                        borderRadius: 22,
+                        elevation: 4,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 8,
+                        shadowOffset: {
+                            width: 0,
+                            height: 3
+                        },
+                        alignItems: "center",
+                        justifyContent: "center"
+                    }}
+
+                >
+
+                    <View
+                        style={{
+                            width: 70,
+                            height: 70,
+                            borderRadius: 20,
+                            backgroundColor: "#FFF7DF",
+                            justifyContent: "center",
+                            alignItems: "center"
+                        }}
+                    >
+
+                        <Ionicons
+                            name="person"
+                            size={34}
+                            color="#E5A900"
+                        />
+
+                    </View>
+
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: "bold",
+                            color: "#111827",
+                            marginTop: 18
+                        }}
+                    >
+                        Account
+                    </Text>
+
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            color: "#9CA3AF",
+                            marginTop: 4
+                        }}
+                    >
+                        Manage your profile
+                    </Text>
+
+                </TouchableOpacity>
+
+            </View>
+
+
+            <TouchableOpacity
+
+                onPress={() => router.push("/sos")}
+
+                style={{
+                    height: 125,
+                    backgroundColor: "#F82F35",
+                    borderRadius: 24,
+                    marginTop: 25,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 28,
+                    elevation: 5,
+                    shadowColor: "#F82F35",
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                    shadowOffset: {
+                        width: 0,
+                        height: 4
+                    }
+                }}
+
+            >
+
+                <View
+                    style={{
+                        width: 68,
+                        height: 68,
+                        borderRadius: 22,
+                        backgroundColor: "rgba(255,255,255,0.18)",
+                        justifyContent: "center",
+                        alignItems: "center"
+                    }}
+                >
+
+                    <Ionicons
+                        name="call"
+                        size={34}
+                        color="white"
+                    />
+
+                </View>
+
+                <View
+                    style={{
+                        marginLeft: 20
+                    }}
+                >
+
+                    <Text
+                        style={{
+                            color: "white",
+                            fontSize: 38,
+                            fontWeight: "bold"
+                        }}
+                    >
+                        SOS
+                    </Text>
+
+                    <Text
+                        style={{
+                            color: "white",
+                            fontSize: 14,
+                            opacity: 0.9,
+                            marginTop: -2
+                        }}
+                    >
+                        Tap to send an emergency alert
+                    </Text>
+
+                </View>
+
+                <Ionicons
+                    name="chevron-forward"
+                    size={24}
+                    color="white"
+                    style={{
+                        marginLeft: "auto"
+                    }}
+                />
+
+            </TouchableOpacity>
+
+        </ScrollView>
+
+    );
 };
 
 export default Home;
