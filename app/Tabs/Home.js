@@ -413,7 +413,7 @@ const Home = () => {
 
             <TouchableOpacity
 
-                onPress={() => router.push("/sos")}
+                 onPress={() => router.push("/Tabs/SOS")}
 
                 style={{
                     height: 125,

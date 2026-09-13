@@ -146,7 +146,7 @@ const LiveMap = () => {
                     fontWeight: "bold",
                     marginLeft: 25
                 }}>
-                    Live Map
+                    SOS
                 </Text>
 
             </View>
