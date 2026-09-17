@@ -8,18 +8,11 @@ import {
     Alert
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { useRouter } from "expo-router";
 
 import { Ionicons } from "@expo/vector-icons";
-
-import {
-    collection,
-    getDocs,
-    deleteDoc,
-    doc
-} from "firebase/firestore";
-
-import { auth, db } from "../../FirebaseConfig";
 
 const Contact = () => {
 
@@ -33,34 +26,14 @@ const Contact = () => {
 
             try {
 
-                const user = auth.currentUser;
-
-                if (!user) {
-                    return;
-                }
-
-                const contactsRef = collection(
-                    db,
-                    "users",
-                    user.uid,
-                    "contacts"
-                );
-
                 const contactsData =
-                    await getDocs(contactsRef);
+                    await AsyncStorage.getItem("contacts");
 
-                const contactList = [];
+                if (contactsData) {
 
-                contactsData.forEach((item) => {
+                    setContacts(JSON.parse(contactsData));
 
-                    contactList.push({
-                        id: item.id,
-                        ...item.data()
-                    });
-
-                });
-
-                setContacts(contactList);
+                }
 
             } catch (error) {
 
@@ -91,28 +64,18 @@ const Contact = () => {
 
                         try {
 
-                            const user = auth.currentUser;
-
-                            if (!user) {
-                                return;
-                            }
-
-                            await deleteDoc(
-                                doc(
-                                    db,
-                                    "users",
-                                    user.uid,
-                                    "contacts",
-                                    contact.id
-                                )
-                            );
-
-                            setContacts(
+                            const newContacts =
                                 contacts.filter(
                                     item =>
                                         item.id !== contact.id
-                                )
+                                );
+
+                            await AsyncStorage.setItem(
+                                "contacts",
+                                JSON.stringify(newContacts)
                             );
+
+                            setContacts(newContacts);
 
                         } catch (error) {
 

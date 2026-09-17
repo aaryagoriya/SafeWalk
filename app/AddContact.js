@@ -9,9 +9,11 @@ import {
     ScrollView
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { useRouter } from "expo-router";
 
-import {collection,addDoc} from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 
 import { auth, db } from "../FirebaseConfig";
 
@@ -22,6 +24,7 @@ const AddContact = () => {
     const router = useRouter();
 
     const [name, setName] = useState("");
+
     const [phone, setPhone] = useState("");
 
     const addContact = async () => {
@@ -50,18 +53,46 @@ const AddContact = () => {
                 return;
             }
 
-            await addDoc(
-                collection(
-                    db,
-                    "users",
-                    user.uid,
-                    "contacts"
-                ),
-                {
-                    name: name,
-                    phone: phone
-                }
+            const contact = {
+                id: Date.now().toString(),
+                name: name,
+                phone: phone
+            };
+
+            const contactsData =
+                await AsyncStorage.getItem("contacts");
+
+            const contacts = contactsData
+                ? JSON.parse(contactsData)
+                : [];
+
+            contacts.push(contact);
+
+            await AsyncStorage.setItem(
+                "contacts",
+                JSON.stringify(contacts)
             );
+
+            try {
+
+                await addDoc(
+                    collection(
+                        db,
+                        "users",
+                        user.uid,
+                        "contacts"
+                    ),
+                    {
+                        name: name,
+                        phone: phone
+                    }
+                );
+
+            } catch (error) {
+
+                console.log(error);
+
+            }
 
             Alert.alert(
                 "Success",
@@ -78,6 +109,7 @@ const AddContact = () => {
             );
 
         }
+
     };
 
     return (
@@ -89,10 +121,12 @@ const AddContact = () => {
             }}
         >
 
-            <View style={{
-                paddingHorizontal: 25,
-                paddingTop: 50
-            }}>
+            <View
+                style={{
+                    paddingHorizontal: 25,
+                    paddingTop: 50
+                }}
+            >
 
                 <TouchableOpacity
                     onPress={() => router.back()}
@@ -106,40 +140,48 @@ const AddContact = () => {
 
                 </TouchableOpacity>
 
-                <Text style={{
-                    fontSize: 34,
-                    fontWeight: "bold",
-                    marginTop: 30
-                }}>
+                <Text
+                    style={{
+                        fontSize: 34,
+                        fontWeight: "bold",
+                        marginTop: 30
+                    }}
+                >
                     Add Contact
                 </Text>
 
-                <Text style={{
-                    fontSize: 16,
-                    color: "#888888",
-                    marginTop: 8,
-                    marginBottom: 40
-                }}>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        color: "#888888",
+                        marginTop: 8,
+                        marginBottom: 40
+                    }}
+                >
                     Add a family member for emergencies.
                 </Text>
 
-                <Text style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    marginBottom: 10
-                }}>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        marginBottom: 10
+                    }}
+                >
                     Contact Name
                 </Text>
 
-                <View style={{
-                    height: 62,
-                    borderWidth: 1.5,
-                    borderColor: "#AAAAAA",
-                    borderRadius: 20,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 18
-                }}>
+                <View
+                    style={{
+                        height: 62,
+                        borderWidth: 1.5,
+                        borderColor: "#AAAAAA",
+                        borderRadius: 20,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingHorizontal: 18
+                    }}
+                >
 
                     <Ionicons
                         name="person-outline"
@@ -160,24 +202,28 @@ const AddContact = () => {
 
                 </View>
 
-                <Text style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    marginTop: 28,
-                    marginBottom: 10
-                }}>
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        marginTop: 28,
+                        marginBottom: 10
+                    }}
+                >
                     Phone Number
                 </Text>
 
-                <View style={{
-                    height: 62,
-                    borderWidth: 1.5,
-                    borderColor: "#AAAAAA",
-                    borderRadius: 20,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 18
-                }}>
+                <View
+                    style={{
+                        height: 62,
+                        borderWidth: 1.5,
+                        borderColor: "#AAAAAA",
+                        borderRadius: 20,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingHorizontal: 18
+                    }}
+                >
 
                     <Ionicons
                         name="call-outline"
@@ -211,11 +257,13 @@ const AddContact = () => {
                     }}
                 >
 
-                    <Text style={{
-                        color: "white",
-                        fontSize: 20,
-                        fontWeight: "bold"
-                    }}>
+                    <Text
+                        style={{
+                            color: "white",
+                            fontSize: 20,
+                            fontWeight: "bold"
+                        }}
+                    >
                         Add Contact
                     </Text>
 

@@ -1,4 +1,13 @@
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useRouter } from "expo-router";
 
@@ -7,9 +16,40 @@ import { Ionicons } from "@expo/vector-icons";
 import CustomButton from "../../components/CustomButton";
 
 const SOS = () => {
+
   const router = useRouter();
 
+  const [contacts, setContacts] = useState([]);
+
+  useEffect(() => {
+
+    const getContacts = async () => {
+
+      try {
+
+        const contactsData =
+          await AsyncStorage.getItem("contacts");
+
+        if (contactsData) {
+
+          setContacts(JSON.parse(contactsData));
+
+        }
+
+      } catch (error) {
+
+        console.log(error);
+
+      }
+
+    };
+
+    getContacts();
+
+  }, []);
+
   return (
+
     <ScrollView
       style={{
         flex: 1,
@@ -21,6 +61,7 @@ const SOS = () => {
         paddingBottom: 30,
       }}
     >
+
       <View
         style={{
           flex: 1,
@@ -29,12 +70,14 @@ const SOS = () => {
           paddingTop: 50,
         }}
       >
+
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
           }}
         >
+
           <Text
             style={{
               fontSize: 34,
@@ -44,6 +87,7 @@ const SOS = () => {
           >
             SOS Alert
           </Text>
+
         </View>
 
         <Text
@@ -63,6 +107,7 @@ const SOS = () => {
             marginTop: 70,
           }}
         >
+
           <View
             style={{
               width: 230,
@@ -73,6 +118,7 @@ const SOS = () => {
               alignItems: "center",
             }}
           >
+
             <View
               style={{
                 width: 200,
@@ -83,9 +129,17 @@ const SOS = () => {
                 alignItems: "center",
               }}
             >
-              <Ionicons name="call-outline" size={105} color="white" />
+
+              <Ionicons
+                name="call-outline"
+                size={105}
+                color="white"
+              />
+
             </View>
+
           </View>
+
         </View>
 
         <Text
@@ -101,16 +155,30 @@ const SOS = () => {
           with your contact
         </Text>
 
-        <View
+        <Text
           style={{
-            marginTop: 62,
+            textAlign: "center",
+            fontSize: 16,
+            fontWeight: "bold",
+            marginTop: 20,
           }}
         >
+          {contacts.length} emergency contact
+          {contacts.length !== 1 ? "s" : ""} saved
+        </Text>
+
+        <View
+          style={{
+            marginTop: 45,
+          }}
+        >
+
           <CustomButton
             title="Send SOS Alert"
             backgroundColor="#F83B32"
             onPress={() => router.push("/LiveMap")}
           />
+
         </View>
 
         <TouchableOpacity
@@ -120,6 +188,7 @@ const SOS = () => {
             marginTop: 20,
           }}
         >
+
           <Text
             style={{
               color: "#2455F5",
@@ -129,8 +198,11 @@ const SOS = () => {
           >
             Cancel
           </Text>
+
         </TouchableOpacity>
+
       </View>
+
     </ScrollView>
   );
 };

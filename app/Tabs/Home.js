@@ -413,7 +413,7 @@ const Home = () => {
 
             <TouchableOpacity
 
-                 onPress={() => router.push("/Tabs/SOS")}
+                 onPress={() => router.push("/Tabs/Sos")}
 
                 style={{
                     height: 125,
@@ -482,15 +482,6 @@ const Home = () => {
                     </Text>
 
                 </View>
-
-                <Ionicons
-                    name="chevron-forward"
-                    size={24}
-                    color="white"
-                    style={{
-                        marginLeft: "auto"
-                    }}
-                />
 
             </TouchableOpacity>
 
