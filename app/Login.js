@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import {
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     Alert,
     ScrollView
@@ -11,11 +10,15 @@ import {
 
 import { useRouter } from "expo-router";
 
-import {signInWithEmailAndPassword,sendPasswordResetEmail,signOut} from "firebase/auth";
+import {
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail
+} from "firebase/auth";
 
 import { auth } from "../FirebaseConfig";
 
 import CustomButton from "../components/CustomButton";
+import CustomInput from "../components/CustomInput";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -67,7 +70,6 @@ const Login = () => {
                     "Login Failed",
                     error.message
                 );
-
             }
         }
     };
@@ -102,12 +104,10 @@ const Login = () => {
                 "Error",
                 error.message
             );
-
         }
     };
 
     return (
-
         <ScrollView
             style={{
                 flex: 1,
@@ -126,13 +126,11 @@ const Login = () => {
                 <TouchableOpacity
                     onPress={() => router.back()}
                 >
-
                     <Ionicons
                         name="arrow-back"
                         size={36}
                         color="black"
                     />
-
                 </TouchableOpacity>
 
                 <Text style={{
@@ -151,95 +149,51 @@ const Login = () => {
                     Login to continue
                 </Text>
 
-                <Text style={{
-                    fontSize: 16,
-                    color: "black",
-                    marginBottom: 10
-                }}>
-                    Email
-                </Text>
+                <CustomInput
+                    label="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="johndoe@outlook.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    leftIcon={
+                        <Ionicons
+                            name="person-outline"
+                            size={28}
+                            color="black"
+                        />
+                    }
+                />
 
-                <View style={{
-                    height: 62,
-                    borderWidth: 1.5,
-                    borderColor: "#AAAAAA",
-                    borderRadius: 20,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 18
-                }}>
-
-                    <Ionicons
-                        name="person-outline"
-                        size={28}
-                        color="black"
-                    />
-
-                    <TextInput
-                        value={email}
-                        onChangeText={setEmail}
-                        placeholder="johndoe@outlook.com"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={{
-                            flex: 1,
-                            fontSize: 16,
-                            marginLeft: 15,
-                            color: "black"
-                        }}
-                    />
-
-                </View>
-
-                <Text style={{
-                    fontSize: 16,
-                    color: "black",
-                    marginTop: 28,
-                    marginBottom: 10
-                }}>
-                    Password
-                </Text>
-
-                <View style={{
-                    height: 62,
-                    borderWidth: 1.5,
-                    borderColor: "#AAAAAA",
-                    borderRadius: 20,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 18
-                }}>
-
-                    <Ionicons
-                        name="lock-closed-outline"
-                        size={28}
-                        color="black"
-                    />
-
-                    <TextInput
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder="****************"
-                        secureTextEntry={true}
-                        style={{
-                            flex: 1,
-                            fontSize: 16,
-                            marginLeft: 15,
-                            color: "black"
-                        }}
-                    />
-
-                </View>
+                <CustomInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="****************"
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="password"
+                    textContentType="password"
+                    leftIcon={
+                        <Ionicons
+                            name="lock-closed-outline"
+                            size={28}
+                            color="black"
+                        />
+                    }
+                />
 
                 <TouchableOpacity
                     onPress={forgotPassword}
                     style={{
                         alignSelf: "flex-end",
-                        marginTop: 18
+                        marginTop: -5
                     }}
                 >
-
                     <Text style={{
                         color: "#2455F5",
                         fontSize: 14,
@@ -247,18 +201,15 @@ const Login = () => {
                     }}>
                         Forgot Password?
                     </Text>
-
                 </TouchableOpacity>
 
                 <View style={{
                     marginTop: 46
                 }}>
-
                     <CustomButton
                         title="Login"
                         onPress={login}
                     />
-
                 </View>
 
                 <View style={{
@@ -277,7 +228,6 @@ const Login = () => {
                     <TouchableOpacity
                         onPress={() => router.push("/SignUp")}
                     >
-
                         <Text style={{
                             color: "#2455F5",
                             fontSize: 15,
@@ -285,7 +235,6 @@ const Login = () => {
                         }}>
                             {" "}Sign Up
                         </Text>
-
                     </TouchableOpacity>
 
                 </View>
