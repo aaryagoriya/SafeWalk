@@ -1,7 +1,5 @@
 # SafeWalk
 
-## Team Trio
-
 SafeWalk is a React Native mobile application developed with Expo. The app is designed to help users feel safer when walking alone by providing live location tracking, emergency SOS support, trusted contacts, destination selection, and walk history.
 
 ## Project Overview
