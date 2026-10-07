@@ -97,7 +97,7 @@ Login / Sign Up
 
 | Area | Technologies |
 | --- | --- |
-| Frontend | React Native, Expo, JavaScript, Expo Router, React Navigation |
+| Frontend | React Native 0.81, React 19.1, Expo SDK 54, JavaScript, Expo Router, React Navigation |
 | Backend / Database | Firebase Authentication, Firebase Firestore |
 | Local storage | AsyncStorage |
 | Maps and location | React Native Maps, Expo Location |
@@ -171,6 +171,39 @@ Run this from the project root (the `SafeWalk` folder):
 npm install
 ```
 
+This installs every package listed in `package.json`, so it is the only command most people need.
+
+<details>
+<summary><b>Optional: install each dependency manually</b></summary>
+
+You do **not** need these if `npm install` worked. They are only useful if you are rebuilding the project from scratch. Run them from the project root.
+
+**Core and Expo packages**
+
+```bash
+npx expo install expo expo-router react react-dom react-native expo-apple-authentication expo-auth-session expo-constants expo-crypto expo-font expo-haptics expo-image expo-linking expo-location expo-splash-screen expo-status-bar expo-symbols expo-system-ui expo-web-browser @expo/vector-icons
+```
+
+**React Native packages**
+
+```bash
+npx expo install @react-native-async-storage/async-storage react-native-gesture-handler react-native-maps react-native-reanimated react-native-safe-area-context react-native-screens react-native-web react-native-worklets
+```
+
+**Firebase, Google Sign-In and React Navigation**
+
+```bash
+npm install firebase @react-native-google-signin/google-signin @react-navigation/native @react-navigation/native-stack @react-navigation/bottom-tabs @react-navigation/elements
+```
+
+**Development dependencies**
+
+```bash
+npm install --save-dev eslint eslint-config-expo typescript @types/react
+```
+
+</details>
+
 ### 3. Start the Expo development server
 
 ```bash
@@ -193,13 +226,15 @@ You can also use `npm start`. The terminal will show a QR code and development o
 
 A physical device is recommended for testing location tracking and SOS.
 
+> **Note:** SafeWalk uses native modules such as `@react-native-google-signin/google-signin`. Native modules like this may not work inside Expo Go. If Google Sign-In fails in Expo Go, run the app as a development build using the Android or iOS commands below.
+
 ### On Android
 
 ```bash
 npm run android
 ```
 
-Starts the app on an Android emulator or a connected Android device.
+This runs `expo run:android`, which builds the app and installs it on an Android emulator or a connected Android device. It requires Android Studio and the Android SDK to be set up.
 
 ### On iOS
 
@@ -207,7 +242,7 @@ Starts the app on an Android emulator or a connected Android device.
 npm run ios
 ```
 
-Requires macOS and the iOS development tools.
+This runs `expo run:ios`, which requires macOS and Xcode.
 
 ### On web
 
@@ -262,12 +297,15 @@ Run these from the project root.
 | Command | Description |
 | --- | --- |
 | `npm install` | Install dependencies |
-| `npm start` | Start the Expo development server |
+| `npm start` | Start the Expo development server (`expo start`) |
 | `npx expo start` | Start the Expo development server directly |
-| `npm run android` | Run on Android |
-| `npm run ios` | Run on iOS |
-| `npm run web` | Run on web |
-| `npm run lint` | Run ESLint |
+| `npm run android` | Build and run on Android (`expo run:android`) |
+| `npm run ios` | Build and run on iOS (`expo run:ios`) |
+| `npm run web` | Start the web version (`expo start --web`) |
+| `npm run lint` | Run ESLint (`expo lint`) |
+| `npm run reset-project` | Run `scripts/reset-project.js` (see warning below) |
+
+> **Warning:** `npm run reset-project` comes from the Expo starter template and may move or delete the starter code in your project. Do not run it unless you know what it does.
 
 ---
 
