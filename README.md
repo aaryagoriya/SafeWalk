@@ -1,77 +1,55 @@
 # SafeWalk
 
-SafeWalk is a React Native mobile application developed with Expo. The app is designed to help users feel safer when walking alone by providing live location tracking, emergency SOS support, trusted contacts, destination selection, and walk history.
+SafeWalk is a React Native mobile app built with Expo. It helps users feel safer when walking alone by providing live location tracking, an emergency SOS feature, trusted emergency contacts, destination selection and walk history.
 
-## Project Overview
+---
 
-SafeWalk allows users to:
+## Table of Contents
 
-- Create an account and log in
-- Start a walk
-- Select a destination
-- Track their live location
-- View their location on a map
-- Use an SOS emergency feature
-- Add and delete emergency contacts
-- View previous walks
-- Manage their account
+- [Features](#features)
+- [User Flow](#user-flow)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Running the App](#running-the-app)
+- [Firebase Setup](#firebase-setup)
+- [Location Setup](#location-setup)
+- [Available Scripts](#available-scripts)
+- [App Screens](#app-screens)
+- [Troubleshooting](#troubleshooting)
+- [Development Notes](#development-notes)
 
-The application uses Firebase for authentication and Firestore for storing application data. AsyncStorage is used for local session persistence.
+---
 
-## Main Features
+## Features
 
 ### Authentication
-
-- User Sign Up
-- User Login
+- Sign up and log in with email and password
 - Google Sign-In
 - Apple Sign-In
-- Firebase Authentication
-- Persistent login session
+- Persistent login session (AsyncStorage)
 
-### Walk
-
-- Start a walk
-- Select a destination
-- Track live location
-- Display the walk on a map
+### Walks
+- Start a walk and select a destination
+- Track live location and view the walk on a map
 - Calculate walking distance
-- Finish a walk
-- Save walk information to Firestore
-
-### Live Location
-
-- Display the user's current location
-- Track location while walking
-- Update the location on the map
-- Use location services for walk tracking
+- Finish a walk and save it to Firestore
 
 ### SOS Emergency
-
-- One-tap SOS feature
-- Display live location during SOS
-- Show the user's current location on a map
-- Access emergency contacts
+- One-tap SOS
+- Live location shown on a map during SOS
+- Access to emergency contacts
 - Stop the SOS session
 
 ### Emergency Contacts
-
-- View emergency contacts
-- Add emergency contacts
-- Delete emergency contacts
-- Store contact information for emergency use
+- View, add and delete emergency contacts
 
 ### Walk History
-
-- View previous walks
-- View saved walk information
-- Retrieve walk data from Firebase Firestore
+- View previously completed walks, loaded from Firestore
 
 ### Account
-
-- View account information
-- Manage account settings
-- Logout
+- View account information and settings
+- Log out
 
 ---
 
@@ -115,229 +93,20 @@ Login / Sign Up
 
 ---
 
-# How to Run the Project
+## Tech Stack
 
-## Requirements
-
-Before running SafeWalk, make sure you have:
-
-- Node.js installed
-- npm installed
-- Git installed
-- Expo Go installed for physical-device testing
-- Android Studio for Android emulator testing
-- Xcode for iOS development on macOS
+| Area | Technologies |
+| --- | --- |
+| Frontend | React Native, Expo, JavaScript, Expo Router, React Navigation |
+| Backend / Database | Firebase Authentication, Firebase Firestore |
+| Local storage | AsyncStorage |
+| Maps and location | React Native Maps, Expo Location |
+| Authentication | Google Sign-In, Apple Authentication, Expo Auth Session |
+| Other libraries | Expo Vector Icons, React Native Reanimated, React Native Gesture Handler, React Native Safe Area Context, Expo Haptics, Expo Web Browser, Expo Constants, Expo Crypto |
 
 ---
 
-## 1. Clone the Repository
-
-Open PowerShell or Command Prompt and run:
-
-```bash
-git clone https://github.com/aaryagoriya/SafeWalk.git
-```
-
-Go into the project folder:
-
-```bash
-cd SafeWalk
-```
-
----
-
-## 2. Install Dependencies
-
-Run:
-
-```bash
-npm install
-```
-
-This installs all packages required by the project.
-
----
-
-## 3. Start the Expo Project
-
-Run:
-
-```bash
-npx expo start
-```
-
-You can also use:
-
-```bash
-npm start
-```
-
-This starts the Expo development server and displays the QR code and development options.
-
----
-
-## 4. Run on a Physical Device
-
-The easiest way to test SafeWalk is using Expo Go.
-
-### Steps
-
-1. Install **Expo Go** on your phone.
-2. Connect your phone and computer to the same Wi-Fi network.
-3. Start the project:
-
-```bash
-npx expo start
-```
-
-4. Scan the QR code using Expo Go.
-5. Allow location permissions when requested.
-
-A physical device is recommended for testing location and SOS features.
-
----
-
-## 5. Run on Android
-
-Run:
-
-```bash
-npm run android
-```
-
-This starts the application on an Android emulator or connected Android device.
-
----
-
-## 6. Run on iOS
-
-Run:
-
-```bash
-npm run ios
-```
-
-This requires macOS and the required iOS development tools.
-
----
-
-## 7. Run on Web
-
-Run:
-
-```bash
-npm run web
-```
-
-The web version can be used for basic interface testing.
-
-Mobile-specific features such as location tracking should be tested on a mobile device.
-
----
-
-# Firebase Setup
-
-SafeWalk uses Firebase for:
-
-- Firebase Authentication
-- Firebase Firestore
-
-The Firebase configuration is located in:
-
-```text
-FirebaseConfig.js
-```
-
-Firebase is used to manage user authentication and application data.
-
-If you want to connect the application to another Firebase project, update the Firebase configuration with the settings from your Firebase project.
-
-### Firebase Authentication
-
-The application supports:
-
-- Email/Password authentication
-- Google authentication
-- Apple authentication
-
-Make sure the required authentication providers are enabled in your Firebase project.
-
-### Firestore
-
-Firestore is used to store application data such as:
-
-- User information
-- Emergency contacts
-- Walk information
-- Walk history
-
----
-
-# Location Setup
-
-SafeWalk uses:
-
-```text
-Expo Location
-```
-
-Location permissions are required for:
-
-- Live location tracking
-- Walk tracking
-- Live maps
-- SOS location
-
-When testing the application, allow location permission when requested.
-
-For the best results, test location features on a physical mobile device.
-
----
-
-# Technologies Used
-
-## Frontend
-
-- React Native
-- Expo
-- JavaScript
-- Expo Router
-- React Navigation
-
-## Backend / Database
-
-- Firebase Authentication
-- Firebase Firestore
-
-## Local Storage
-
-- AsyncStorage
-
-## Maps and Location
-
-- React Native Maps
-- Expo Location
-
-## Authentication
-
-- Google Sign-In
-- Apple Authentication
-- Expo Auth Session
-
-## Other Libraries
-
-- Expo Vector Icons
-- React Native Reanimated
-- React Native Gesture Handler
-- React Native Safe Area Context
-- Expo Haptics
-- Expo Web Browser
-- Expo Constants
-- Expo Crypto
-
----
-
-# Project Structure
+## Project Structure
 
 ```text
 SafeWalk/
@@ -360,20 +129,11 @@ SafeWalk/
 │       ├── SOS.js
 │       └── _layout.js
 │
-├── assets/
-│   └── Images, icons and other assets
-│
-├── components/
-│   └── Reusable components
-│
-├── constants/
-│   └── Application constants
-│
-├── hooks/
-│   └── Custom React hooks
-│
-├── scripts/
-│   └── Project scripts
+├── assets/          # Images, icons and other assets
+├── components/      # Reusable components
+├── constants/       # Application constants
+├── hooks/           # Custom React hooks
+├── scripts/         # Project scripts
 │
 ├── FirebaseConfig.js
 ├── app.json
@@ -386,164 +146,174 @@ SafeWalk/
 
 ---
 
-# Application Screens
+## Getting Started
 
-## Landing Screen
+### Requirements
 
-The landing screen is the starting point of the application.
+- [Node.js](https://nodejs.org/) and npm
+- [Git](https://git-scm.com/)
+- **Expo Go** on your phone (for physical-device testing)
+- Android Studio (optional, for the Android emulator)
+- Xcode on macOS (optional, for iOS development)
 
-Users can continue to the login or sign-up screens.
-
-## Login Screen
-
-Allows existing users to log in to SafeWalk.
-
-## Sign Up Screen
-
-Allows new users to create a SafeWalk account.
-
-## Home Screen
-
-The main screen after the user logs in.
-
-It provides access to the main SafeWalk features.
-
-## Walk Screen
-
-Allows users to:
-
-- Start a walk
-- Select a destination
-- View their current location
-- Track their movement
-- Finish their walk
-
-## Live Map
-
-Displays the user's current location on a map.
-
-The live map is also used during the SOS flow.
-
-## SOS Screen
-
-Provides access to the emergency SOS functionality.
-
-## Contact Screen
-
-Allows users to manage their emergency contacts.
-
-Users can add or delete contacts.
-
-## Add Contact Screen
-
-Allows users to add a new emergency contact.
-
-## Walk History
-
-Displays previously completed walks.
-
-## Account Screen
-
-Provides account-related options and logout functionality.
-
----
-
-# Useful Commands
-
-### Start Expo
+### 1. Clone the repository
 
 ```bash
-npm start
+git clone https://github.com/aaryagoriya/SafeWalk.git
+cd SafeWalk
 ```
 
-### Start Expo Directly
+### 2. Install dependencies
+
+Run this from the project root (the `SafeWalk` folder):
+
+```bash
+npm install
+```
+
+### 3. Start the Expo development server
 
 ```bash
 npx expo start
 ```
 
-### Run Android
+You can also use `npm start`. The terminal will show a QR code and development options.
+
+---
+
+## Running the App
+
+### On a physical device (recommended)
+
+1. Install **Expo Go** on your phone.
+2. Connect your phone and computer to the **same Wi-Fi network**.
+3. Run `npx expo start` in the project root.
+4. Scan the QR code with Expo Go.
+5. Allow location permissions when asked.
+
+A physical device is recommended for testing location tracking and SOS.
+
+### On Android
 
 ```bash
 npm run android
 ```
 
-### Run iOS
+Starts the app on an Android emulator or a connected Android device.
+
+### On iOS
 
 ```bash
 npm run ios
 ```
 
-### Run Web
+Requires macOS and the iOS development tools.
+
+### On web
 
 ```bash
 npm run web
 ```
 
-### Run ESLint
-
-```bash
-npm run lint
-```
-
-### Install Dependencies
-
-```bash
-npm install
-```
+The web version is only suitable for basic interface testing. Mobile-specific features such as location tracking should be tested on a mobile device.
 
 ---
 
-# Troubleshooting
+## Firebase Setup
 
-## Expo is not starting
-
-Try:
-
-```bash
-npm install
-```
-
-Then:
-
-```bash
-npx expo start
-```
-
----
-
-## Location is not working
-
-Check that:
-
-- Location permission is enabled.
-- Location services are enabled on the device.
-- The application is running on a supported device or emulator.
-- The device has an active location signal.
-
----
-
-## Firebase is not working
-
-Check that:
-
-- Firebase is configured correctly.
-- Firebase Authentication is enabled.
-- Required authentication providers are enabled.
-- Firestore is configured correctly.
-- `FirebaseConfig.js` contains the correct Firebase configuration.
-
----
-
-## Changes are not appearing
-
-Stop the Expo development server:
+SafeWalk uses Firebase Authentication and Firestore. The Firebase configuration is in:
 
 ```text
-CTRL + C
+FirebaseConfig.js
 ```
 
-Then start it again:
+To connect the app to your own Firebase project:
+
+1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
+2. Enable the authentication providers you want to use (Email/Password, Google, Apple).
+3. Create a Firestore database.
+4. Replace the settings in `FirebaseConfig.js` with the configuration from your Firebase project.
+
+Firestore stores:
+- User information
+- Emergency contacts
+- Walk information
+- Walk history
+
+---
+
+## Location Setup
+
+SafeWalk uses **Expo Location**. Location permission is required for:
+
+- Live location tracking
+- Walk tracking
+- Live maps
+- SOS location
+
+Allow location permission when prompted. For best results, test on a physical mobile device.
+
+---
+
+## Available Scripts
+
+Run these from the project root.
+
+| Command | Description |
+| --- | --- |
+| `npm install` | Install dependencies |
+| `npm start` | Start the Expo development server |
+| `npx expo start` | Start the Expo development server directly |
+| `npm run android` | Run on Android |
+| `npm run ios` | Run on iOS |
+| `npm run web` | Run on web |
+| `npm run lint` | Run ESLint |
+
+---
+
+## App Screens
+
+| Screen | File | Purpose |
+| --- | --- | --- |
+| Landing | `app/Landing.js` | Starting point; continue to login or sign up |
+| Login | `app/Login.js` | Log in to an existing account |
+| Sign Up | `app/SignUp.js` | Create a new account |
+| Home | `app/Tabs/Home.js` | Main screen after login |
+| Walk | `app/Walk.js` | Start a walk, pick a destination, track and finish |
+| Live Map | `app/LiveMap.js` | Shows current location; also used in the SOS flow |
+| SOS | `app/Tabs/SOS.js` | Emergency SOS feature |
+| Contacts | `app/Tabs/Contact.js` | View and delete emergency contacts |
+| Add Contact | `app/AddContact.js` | Add a new emergency contact |
+| Walk History | `app/WalkHistory.js` | View previous walks |
+| Account | `app/Tabs/Account.js` | Account options and logout |
+
+---
+
+## Troubleshooting
+
+**Expo is not starting**
+
+```bash
+npm install
+npx expo start
+```
+
+**Location is not working**
+
+- Check that location permission is enabled for the app.
+- Check that location services are turned on for the device.
+- Make sure you are using a supported device or emulator.
+- Make sure the device has an active location signal.
+
+**Firebase is not working**
+
+- Check that `FirebaseConfig.js` contains the correct configuration.
+- Check that Firebase Authentication and the required sign-in providers are enabled.
+- Check that Firestore is set up in your Firebase project.
+
+**Changes are not appearing**
+
+Stop the development server with `CTRL + C`, then start it again:
 
 ```bash
 npx expo start
@@ -551,10 +321,10 @@ npx expo start
 
 ---
 
-# Development Notes
+## Development Notes
 
 - Run `npm install` after cloning the repository.
-- Keep Firebase configuration available for authentication and Firestore.
+- Keep your Firebase configuration available for authentication and Firestore.
 - Allow location permissions when testing location features.
-- Use a physical device when testing live location and SOS functionality.
-- Keep the computer and mobile device connected to the same network when using Expo Go.
+- Use a physical device to test live location and SOS.
+- Keep your computer and phone on the same network when using Expo Go.
